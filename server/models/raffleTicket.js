@@ -2,13 +2,15 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const raffleTicketSchema = new Schema({
-    {
-        id: { type: Number, required: true },
-        isUsed: { type: Boolean, default: false }     
+    isUsed: { type: Boolean, default: false, required: true },
+    createdAt: {
+        type: Date,
+        default: Date.now()
     },
-    {
-        timestamps: true,
-    }
-);
+    updatedAt: {
+        type: Date,
+        default: Date.now()
+    }     
+});
 
 module.exports = mongoose.model('RaffleTicket', raffleTicketSchema);

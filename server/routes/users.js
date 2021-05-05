@@ -1,9 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/auth');
-const UserCredential = require('../models/user-credential');
 const User = require('../models/user');
-const bcrypt = require('bcryptjs');
+const RaffleTicket = require('../models/raffleTicket');
+const user = require('../models/user');
+
+router.post('/getRaffleTicket', (req, res) => {
+    const { userId } = req.body;
+    let ticket = new RaffleTicket();
+    ticket.save().then(() => {
+        User.findOne({ userId }).then(user => {
+            user.raffleTickets.push(ticket)
+            user.save({ raffleTickets });
+            res.status(201).send({ raffleTicketId: ticket.id, userId: user.id });
+        });
+    });;
+});
 
 router.post('/', (req, res) => {
     if (!req.body) {
