@@ -1,91 +1,83 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
-const RaffleTicket = require('../models/raffleTicket');
-const User = require('../models/user');
+const Event = require('../models/event');
+
+router.post('/createUser', (req, res) => {
+    let {email, firstName, lastName} = req.body;
+    let newUser = new User({email, firstName, lastName});
+    newUser.raffleTickets = [];
+    newUser.save().then(() => {
+        res.status(201).send({ successs: true, newUser });
+    });//.catch(err => { res.status(400).send({err}) });
+});
+
+router.get('/allUsers', (req, res) => {
+    User.find({}).then(data => {
+        res.status(200).send(data);
+    });
+});
 
 router.post('/getRaffleTicket', (req, res) => {
     const { userId } = req.body;
-    let ticket = new RaffleTicket();
-    ticket.save().then(() => {
-        User.findOne({ userId }).then(user => {
-            user.raffleTickets.push(ticket)
-            user.save({ raffleTickets });
-            res.status(201).send({ raffleTicketId: ticket.id, userId: user.id });
-        });
-    });;
-});
-
-router.post('/', (req, res) => {
-    if (!req.body) {
-        res.status(400).send({error: "Email and Password not present in request"});
-        return;
+    if(!userId) {
+        res.status(400).send("userId missing");
     }
-
-    const { email, password } = req.body;
-
-    if (!email) {
-        res.status(400).send({error: "Email not present in request"});
-        return;
-    }
-
-    if (!password) {
-        res.status(400).send({error: "Password not present in request"});
-        return;
-    }
-
-    UserCredential.findOne({ email }).then(user => {
-        if (user) {
-            res.status(400).send({error: "User already signed up"});
-            return;
+    User.findOne({ _id: userId }).then(user => {
+        if(!user) {
+            res.status(400).send("User doesn't exist!");
         }
-
-        const hash = bcrypt.hashSync(password);
-
-        const userCredential = new UserCredential({ email, password: hash });
-
-        userCredential.save().then(() => {
-            const user = new User({ _id: userCredential.id, email });
-            user.save().then(() => {
-                res.status(201).send({ id: userCredential.id });
-            });
+        user.raffleTickets.push({});
+        user.save().then(() => {
+            res.status(201).send({ userId, "raffleTicket": user.raffleTickets[user.raffleTickets.length-1]._id });
         });
-    }).catch(() => {
-        res.status(500).send({ error: "Internal Server Error" });
     });
 });
 
-router.get('/me', auth.authenticate, (req, res) => {
-    User.findOne({ _id: req.session.userId }).then(user => {
-        res.send(user);
-    }).catch(() => {
-        res.status(500).send({ error: "Internal Server Error" });
-    });
-});
-
-router.get('/:userId', (req, res) => {
-    User.findOne({ _id: req.params.userId }).then(user => {
-        res.send(user);
-    }).catch(() => {
-        res.status(500).send({ error: "Internal Server Error" });
-    });
-});
-
-router.put('/me', auth.authenticate, (req, res) => {
-    if (!req.session.userId) {
-        res.send(401).send({ error: "Not logged in"});
-    }
-
-    const { firstName, lastName } = req.body;
-
-    const updateQuery = {};
-    (firstName !== undefined) && (updateQuery.firstName = firstName);
-    (lastName !== undefined) && (updateQuery.lastName = lastName);
-
-    User.updateOne({ _id: req.session.userId }, updateQuery).then(() => {
-        res.status(204).send();
-    }).catch(() => {
-        res.status(500).send({ error: "Internal Server Error" });
+router.post('/participate', (req, res) => {
+    const {eventId, userId, raffleTicketId} = req.body;
+    let flag = true;
+    User.findOne({_id: userId}).then(user => {
+        user.raffleTickets.toObject().forEach( (raffleTicket, index) => {
+            if(raffleTicket._id.toString() === raffleTicketId) {
+                flag = false;
+                if(raffleTicket.isUsed) {
+                    res.status(400).send({ "success": false, "msg": "this raffle ticket is already used" });
+                } else {
+                    user.raffleTickets[index].isUsed = true;
+                    user.save().then(() => {
+                        Event.findOne({ _id: eventId }).then( event => {
+                            if(event.isExpired) {
+                                res.status(400).send({ "success": false, "msg": "event has already expired"});
+                            }
+                            
+                            let flag2 = true;
+                            event.users.toObject().forEach(ele => {
+                                if(ele.userId === user._id.toString()) {
+                                    flag2 = false;
+                                    res.status(400).send({ "success": false, "msg": "you are already participating in this event"});
+                                }
+                            });
+                            
+                            if(flag2) {
+                                event.users.push({
+                                    userId,
+                                    raffleTicketId
+                                });
+                        
+                                event.save().then(() => { 
+                                    res.status(201).send({ "success": true, "msg": "You are now participating in the event" }); 
+                                });
+                            }
+                        });
+                    });        
+                }
+            }
+        });
+    }).finally(() => {
+        if(flag) {
+            res.status(400).send({ "success": false, "msg": "user doesn't own the raffle ticket" });
+        }
     });
 });
 

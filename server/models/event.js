@@ -1,6 +1,17 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
+const participationSchema = new Schema({
+    userId: {
+        type: String,
+        required: true
+    },
+    raffleTicketId: {
+        type: String,
+        required: true
+    },
+});
+
 const eventSchema = new Schema({
     time: {
         type: Number,
@@ -14,6 +25,19 @@ const eventSchema = new Schema({
     reward: {
         type: String,
         required: true
+    },
+    isExpired: {
+        type: Boolean,
+        default: false,
+        required: true
+    },
+    winner: {
+        type: String,
+        default: ""
+    },
+    users: {
+        type: [participationSchema],
+        default: []
     }
 });
 

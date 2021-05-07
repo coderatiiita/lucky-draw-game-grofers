@@ -1,8 +1,4 @@
 const express = require('express');
-const path = require('path');
-var genuuid = require('uuid').v4;
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
 
 const app = express();
 
@@ -23,23 +19,7 @@ db.connect({
     database: process.env.DB_NAME
 }).then(() => {
     //Handle /api with the api middleware
-    app.use('/api', session({
-        genid() {
-            return genuuid() // use UUIDs for session IDs
-        },
-        store: new MongoStore({ client: db.getClient() }),
-        secret: process.env.SESSION_SECRET||"raftar2097",
-        resave: true,
-        saveUninitialized: false
-    }), api);
-
-    //Handle non-api routes with static build folder
-    app.use(express.static(path.join(__dirname, 'build')));
-
-    //Return index.html for routes not handled by build folder
-    app.get('*', function (req, res) {
-        res.sendFile(path.join(__dirname, 'build', 'index.html'));
-    });
+    app.use('/api', api);
 
     //Start listening on port
     app.listen(port, () => {

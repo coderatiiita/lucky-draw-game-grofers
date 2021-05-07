@@ -1,13 +1,26 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const raffleTicketSchema = require("./raffleTicket");
+const raffleTicketSchema = new Schema({
+    isUsed: { type: Boolean, default: false },
+    createdAt: {
+        type: Date,
+        default: Date.now()
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now()
+    },
+    eventId: {
+        type: String,
+        default: ""
+    }
+});
 
 const userSchema = new Schema({
     email: {
         type: String,
-        required: true,
-        unique: true
+        required: true
     },
     firstName: String,
     lastName: String,
@@ -19,7 +32,10 @@ const userSchema = new Schema({
         type: Date,
         default: Date.now()
     },
-    raffleTickets: [raffleTicketSchema]
+    raffleTickets: {
+        type: [raffleTicketSchema],
+        default: []
+    }
 });
 
 module.exports = mongoose.model('User', userSchema);
